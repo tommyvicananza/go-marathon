@@ -40,7 +40,6 @@ const (
 	fakeAppNameBroken = "/fake_app_broken"
 	fakeDeploymentID  = "867ed450-f6a8-4d33-9b0e-e11c5513990b"
 	fakeAPIFilename   = "./tests/rest-api/methods.yml"
-	fakeAPIPort       = 3000
 )
 
 type restMethod struct {
@@ -79,22 +78,28 @@ func getTestURL(urlString string) string {
 	return fmt.Sprintf("%s://%s", parsedURL.Scheme, strings.Join([]string{parsedURL.Host, parsedURL.Host, parsedURL.Host}, ","))
 }
 
+func newFakeAuthMarathonEndpoint(t *testing.T, config *Config, username, password string) *endpoint {
+	return newFakeMarathonService(t, config, username, password)
+}
+
 func newFakeMarathonEndpoint(t *testing.T, config *Config) *endpoint {
+	return newFakeMarathonService(t, config, "", "")
+}
+
+func newFakeMarathonService(t *testing.T, config *Config, username, password string) *endpoint {
 	once.Do(func() {
-		// step: open and read in the methods yaml
+		var methods []*restMethod
+		uris = make(map[string]*string, 0)
+
 		contents, err := ioutil.ReadFile(fakeAPIFilename)
 		if err != nil {
 			t.Fatalf("unable to read in the methods yaml file: %s", fakeAPIFilename)
 		}
-		// step: unmarshal the yaml
-		var methods []*restMethod
 		err = yaml.Unmarshal([]byte(contents), &methods)
 		if err != nil {
 			t.Fatalf("Unable to unmarshal the methods yaml, error: %s", err)
 		}
-
 		// step: construct a hash from the methods
-		uris = make(map[string]*string, 0)
 		for _, method := range methods {
 			uris[fmt.Sprintf("%s:%s", method.Method, method.URI)] = &method.Content
 		}
@@ -103,18 +108,16 @@ func newFakeMarathonEndpoint(t *testing.T, config *Config) *endpoint {
 	eventSrv := eventsource.NewServer()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/v2/events", eventSrv.Handler("event"))
-	mux.HandleFunc("/", func(writer http.ResponseWriter, reader *http.Request) {
-		key := fmt.Sprintf("%s:%s", reader.Method, reader.RequestURI)
+	mux.HandleFunc("/v2/events", basicAuthMiddleware(username, password, eventSrv.Handler("event")))
+	mux.HandleFunc("/", basicAuthMiddleware(username, password, func(writer http.ResponseWriter, req *http.Request) {
+		key := fmt.Sprintf("%s:%s", req.Method, req.RequestURI)
 		content, found := uris[key]
 		if found {
-			writer.Header().Add("Content-Type", "application/json")
 			writer.Write([]byte(*content))
 			return
 		}
-
 		http.Error(writer, `{"message": "not found"}`, 404)
-	})
+	}))
 
 	httpSrv := httptest.NewServer(mux)
 
@@ -139,6 +142,24 @@ func newFakeMarathonEndpoint(t *testing.T, config *Config) *endpoint {
 		},
 		Client: client,
 		URL:    config.URL,
+	}
+}
+
+// basicAuthMiddleware handles basic auth
+func basicAuthMiddleware(username, password string, next http.HandlerFunc) func(http.ResponseWriter, *http.Request) {
+	unauthorized := "{\"message\": \"invalid username or password\"}"
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		u, p, found := r.BasicAuth()
+		if !found && (username != "" || password != "") {
+			http.Error(w, unauthorized, 401)
+			return
+		}
+		if username != u || password != p {
+			http.Error(w, unauthorized, 401)
+			return
+		}
+		next(w, r)
 	}
 }
 

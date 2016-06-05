@@ -38,6 +38,53 @@ func TestGetMarathonURL(t *testing.T) {
 	assert.Equal(t, endpoint.Client.GetMarathonURL(), endpoint.URL)
 }
 
+func TestApiRequest(t *testing.T) {
+	cases := []struct {
+		Auth     bool
+		Username string
+		Password string
+		Ok       bool
+	}{
+		{
+			Username: "bad",
+			Ok:       true,
+		},
+		{
+			Auth:     true,
+			Username: "bad",
+		},
+		{
+			Auth:     true,
+			Username: "test",
+			Password: "test",
+			Ok:       true,
+		},
+	}
+	for i, x := range cases {
+		var endpoint *endpoint
+		switch x.Auth {
+		case true:
+			config := NewDefaultConfig()
+			config.HTTPBasicAuthUser = x.Username
+			config.HTTPBasicPassword = x.Password
+			endpoint = newFakeAuthMarathonEndpoint(t, &config, "test", "test")
+		default:
+			endpoint = newFakeMarathonEndpoint(t, nil)
+		}
+
+		_, err := endpoint.Client.Applications(nil)
+
+		if x.Ok && err != nil {
+			t.Errorf("case %d, did not expect an error: %s", i, err)
+		}
+		if !x.Ok && err == nil {
+			t.Errorf("case %d, expected to received an error", i)
+		}
+
+		endpoint.Close()
+	}
+}
+
 func TestOneLogLine(t *testing.T) {
 	in := `
 	a
