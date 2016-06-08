@@ -36,15 +36,14 @@ type Task struct {
 	ServicePorts       []int                `json:"servicePorts"`
 	StagedAt           string               `json:"stagedAt"`
 	StartedAt          string               `json:"startedAt"`
+	IPAddresses        []*IPAddress         `json:"ipAddresses"`
 	Version            string               `json:"version"`
-	IPAddresses				 []*IpAddressTask 		`json:"ipAddresses"`
 }
 
-// IpAddressTask gives info where an application is running (useful when it runs
-// in a docker network which uses a different network interface)
-type IpAddressTask struct {
-	IpAddress					string								`json:"ipAddress"`
-	Protocol					string								`json:"protocol"`
+// IPAddress represents a task's IP address and protocol.
+type IPAddress struct {
+	IPAddress string `json:"ipAddress"`
+	Protocol  string `json:"protocol"`
 }
 
 // AllTasksOpts contains a payload for AllTasks method
