@@ -34,19 +34,19 @@ type Applications struct {
 	Apps []Application `json:"apps"`
 }
 
-// IpAddress is used by Ip Per Task Funcionality https://mesosphere.github.io/marathon/docs/ip-per-task.html
-type IpAddress struct {
+// IPAddressPerTask is used by IP-per-task functionality Funcionality https://mesosphere.github.io/marathon/docs/ip-per-task.html
+type IPAddressPerTask struct {
 	Groups []string `json:"groups,omitempty"`
 	Labels map[string]string `json:"labels,omitempty"`
 	Discovery *Discovery `json:"discovery,omitempty"`
 }
 
-// Discovery provides info about ports expose by Ip Per Task Funcionality
+// Discovery provides info about ports expose by Ip-per-task Funcionality
 type Discovery struct {
 	Ports []*Ports `json:"ports,ommitempty"`
 }
 
-// Ports provides info about ports used by Ip Per Task
+// Ports provides info about ports used by Ip-per-task
 type Ports struct {
 	Number int `json:"number,omitempty"`
 	Name string `json:"name:omitempty"`
@@ -88,7 +88,7 @@ type Application struct {
 	AcceptedResourceRoles []string            `json:"acceptedResourceRoles,omitempty"`
 	LastTaskFailure       *LastTaskFailure    `json:"lastTaskFailure,omitempty"`
 	Fetch                 []Fetch             `json:"fetch"`
-	IpAddress							*IpAddress					`json:"ipAddress,omitempty"`
+	IPAddressPerTask			*IPAddressPerTask		`json:"ipAddress,omitempty"`
 }
 
 // ApplicationVersions is a collection of application versions for a specific app in marathon
